@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban Grist</title>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <style>
+    :root {
+      --bf-main: #6a6af4;
+      --bf-sun: #000091;
+      --bf-sun-hover: #1212ff;
+      --bf-975: #f5f5fe;
+      --bf-950: #ececfe;
+      --bf-925: #e3e3fd;
+      --bf-850: #cacafb;
+      --white: #ffffff;
+      --grey-text: #3a3a3a;
+      --grey-subtle: #777;
+      --shadow-sm: 0 1px 3px rgba(0,0,145,.07), 0 2px 8px rgba(0,0,145,.05);
+      --shadow-card: 0 2px 8px rgba(0,0,145,.08), 0 1px 2px rgba(0,0,145,.06);
+      --zoom: 1;
+      --radius-col: calc(10px * var(--zoom));
+      --radius-card: calc(8px * var(--zoom));
+      --col-width: calc(276px * var(--zoom));
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bf-975);
+      color: var(--grey-text);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #app {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-size: calc(16px * var(--zoom));
+    }
+
+    /* ── BARRE D'OUTILS ── */
+    /* Tailles en px : la barre ne doit pas se redimensionner avec le zoom. */
+    #barre-outils {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 6px 16px 0;
+      flex-shrink: 0;
+      font-size: 12px;
+    }
+    #barre-outils label {
+      color: var(--grey-subtle);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    #zoom-range {
+      width: 120px;
+      accent-color: var(--bf-sun);
+      cursor: pointer;
+    }
+    #zoom-valeur {
+      color: var(--bf-sun);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      min-width: 42px;
+      text-align: right;
+    }
+
+    /* ── BOARD ── */
+    #conteneur-kanban {
+      display: flex;
+      gap: 0.75em;
+      align-items: flex-start;
+      padding: 0.9em 1em 1.5em;
+      overflow-x: auto;
+      overflow-y: hidden;
+      flex: 1;
+      min-height: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--bf-850) transparent;
+    }
+    #conteneur-kanban::-webkit-scrollbar { height: 6px; }
+    #conteneur-kanban::-webkit-scrollbar-thumb { background: var(--bf-850); border-radius: 3px; }
+
+    /* ── COLUMN ── */
+    .colonne-kanban {
+      flex: 0 0 var(--col-width);
+      min-width: var(--col-width);
+      max-width: var(--col-width);
+      background: var(--white);
+      border-radius: var(--radius-col);
+      box-shadow: var(--shadow-sm);
+      border: 1.5px solid var(--bf-925);
+      display: flex;
+      flex-direction: column;
+      max-height: 100%;
+    }
+    .entete-colonne {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7em 0.9em 0.6em;
+      border-radius: var(--radius-col) var(--radius-col) 0 0;
+      font-weight: 700;
+      font-size: 0.78em;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    .entete-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+      flex-shrink: 0;
+    }
+    .compteur-colonne {
+      background: rgba(0,0,0,0.07);
+      border-radius: 10px;
+      padding: 0.1em 0.45em;
+      font-size: 0.85em;
+      font-weight: 500;
+      min-width: 1.6em;
+      text-align: center;
+    }
+    .entete-ajout {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5em;
+      height: 1.5em;
+      padding: 0;
+      border: none;
+      border-radius: 5px;
+      background: rgba(0,0,0,0.07);
+      color: currentColor;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .entete-ajout:hover { background: rgba(0,0,0,0.16); }
+    .entete-ajout svg { display: block; }
+
+    /* ── COLUMN CONTENT ── */
+    .contenu-colonne {
+      padding: 0.5em 0.6em 0.6em;
+      min-height: 60px;
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--bf-850) transparent;
+    }
+    .contenu-colonne::-webkit-scrollbar { width: 4px; }
+    .contenu-colonne::-webkit-scrollbar-thumb { background: var(--bf-850); border-radius: 2px; }
+
+    /* ── PIED DE COLONNE ── */
+    /* Frere de .contenu-colonne : place a l'interieur, le bouton deviendrait
+       deplacable par Sortable et fausserait le compteur de cartes. */
+    .pied-ajout {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+      margin: 0 0.6em 0.6em;
+      padding: 0.55em 0.6em;
+      font-family: inherit;
+      font-size: 0.78em;
+      font-weight: 600;
+      text-align: left;
+      color: var(--grey-subtle);
+      background: transparent;
+      border: 1px dashed var(--bf-850);
+      border-radius: var(--radius-card);
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    .pied-ajout:hover {
+      background: var(--bf-975);
+      border-color: var(--bf-main);
+      color: var(--bf-sun);
+    }
+    .pied-ajout svg { display: block; flex-shrink: 0; }
+
+    /* ── CARD ── */
+    .carte {
+      background: var(--white);
+      border-radius: var(--radius-card);
+      padding: 0.7em 0.75em 0.6em;
+      margin-bottom: 0.5em;
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--bf-925);
+      cursor: grab;
+      transition: box-shadow 0.15s, transform 0.1s, border-color 0.15s;
+      position: relative;
+    }
+    .carte:hover { box-shadow: 0 4px 16px rgba(0,0,145,.13); border-color: var(--bf-850); }
+    .carte:active { cursor: grabbing; transform: scale(1.02); }
+    .carte.carte-selected {
+      border-color: var(--bf-main);
+      box-shadow: 0 0 0 2px rgba(106,106,244,.28), var(--shadow-card);
+      background: var(--bf-975);
+    }
+    .carte.carte-selected:hover { border-color: var(--bf-main); }
+    .sortable-ghost { opacity: 0.35; }
+    .sortable-drag { box-shadow: 0 8px 32px rgba(0,0,145,.18); }
+
+    .carte-titre {
+      font-size: 0.85em;
+      font-weight: 600;
+      color: var(--grey-text);
+      line-height: 1.35;
+      margin-bottom: 0.45em;
+      padding-right: 1.5em;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .carte-supprimer {
+      position: absolute;
+      top: 0.35em;
+      right: 0.35em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.4em;
+      height: 1.4em;
+      padding: 0;
+      border: none;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--grey-subtle);
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.12s, background 0.12s, color 0.12s;
+    }
+    .carte:hover .carte-supprimer,
+    .carte-selected .carte-supprimer,
+    .carte-supprimer:focus-visible { opacity: 1; }
+    .carte-supprimer:hover { background: #fde8e8; color: #a51a1a; }
+    .carte-supprimer svg { display: block; }
+
+    /* ── PROPRIETES VISIBLES (generique) ── */
+    .carte-prop {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4em;
+      margin-top: 0.35em;
+      font-size: 0.75em;
+      line-height: 1.3;
+    }
+    .carte-prop-label {
+      flex-shrink: 0;
+      color: var(--grey-subtle);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      font-size: 0.9em;
+    }
+    .carte-prop-val {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25em;
+      min-width: 0;
+      color: var(--grey-text);
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .carte-prop-badge {
+      display: inline-block;
+      font-size: 0.95em;
+      font-weight: 600;
+      padding: 0.1em 0.5em;
+      border-radius: 4px;
+      letter-spacing: 0.02em;
+    }
+    .carte-prop-link {
+      color: var(--bf-sun);
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .carte-prop-link:hover { color: var(--bf-sun-hover); }
+    .carte-attach-btn {
+      display: inline-flex;
+      align-items: flex-start;
+      gap: 0.3em;
+      max-width: 100%;
+      text-align: left;
+      font-family: inherit;
+      font-size: 0.95em;
+      font-weight: 600;
+      color: var(--bf-sun);
+      background: var(--bf-950);
+      border: 1px solid var(--bf-850);
+      border-radius: 4px;
+      padding: 0.2em 0.5em;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .carte-attach-btn:hover { background: var(--bf-925); border-color: var(--bf-main); }
+    .carte-attach-icon { flex-shrink: 0; display: inline-flex; line-height: 0; margin-top: 0.15em; }
+    .carte-attach-label { min-width: 0; overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+
+    /* ── VIEWER PIECE JOINTE (lightbox) ── */
+    .viewer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,40,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      padding: 2vh 2vw;
+      animation: fadeIn 0.15s ease;
+    }
+    .viewer-box {
+      background: var(--white);
+      border-radius: 10px;
+      box-shadow: 0 20px 60px rgba(0,0,60,.35);
+      width: min(1000px, 96vw);
+      height: min(90vh, 900px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .viewer-head {
+      display: flex;
+      align-items: center;
+      gap: 0.6em;
+      padding: 0.6em 0.9em;
+      border-bottom: 1.5px solid var(--bf-925);
+      flex-shrink: 0;
+    }
+    .viewer-title {
+      font-size: 0.85em;
+      font-weight: 700;
+      color: var(--bf-sun);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .viewer-close {
+      flex-shrink: 0;
+      border: none;
+      background: var(--bf-950);
+      color: var(--bf-sun);
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      font-size: 1.3em;
+      line-height: 1;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .viewer-close:hover { background: var(--bf-925); }
+    .viewer-body {
+      flex: 1;
+      min-height: 0;
+      background: #f0f0f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+    }
+    .viewer-media { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+    .viewer-frame { width: 100%; height: 100%; border: none; }
+    .viewer-fallback {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.9em;
+      padding: 2em;
+      font-size: 0.9em;
+      color: var(--grey-subtle);
+    }
+    .viewer-dl {
+      color: var(--white);
+      background: var(--bf-sun);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.9em;
+      padding: 0.5em 1.1em;
+      border-radius: 6px;
+    }
+    .viewer-dl:hover { background: var(--bf-sun-hover); }
+
+    /* ── MESSAGES ── */
+    .toast {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 80vw;
+      padding: 0.7em 1.2em;
+      border-radius: 8px;
+      font-size: 0.82em;
+      font-weight: 600;
+      text-align: center;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    }
+    .toast-erreur { background: #fde8e8; color: #a51a1a; }
+    .toast-info { background: var(--bf-925); color: var(--bf-sun); }
+
+    /* ── MODALE DE CONFIRMATION ── */
+    /* Reprend .viewer-overlay pour le fond, mais pas .viewer-box qui est
+       dimensionnee pour du media. */
+    .confirm-box {
+      background: var(--white);
+      border-radius: 10px;
+      box-shadow: 0 20px 60px rgba(0,0,60,.35);
+      width: min(380px, 92vw);
+      padding: 1.3em 1.4em 1.1em;
+    }
+    .confirm-titre {
+      font-size: 1em;
+      font-weight: 700;
+      color: var(--grey-text);
+      margin-bottom: 0.5em;
+    }
+    .confirm-texte {
+      font-size: 0.88em;
+      color: var(--grey-subtle);
+      line-height: 1.4;
+      margin-bottom: 1.3em;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.6em;
+    }
+    .confirm-actions button {
+      font-family: inherit;
+      font-size: 0.85em;
+      font-weight: 700;
+      padding: 0.55em 1.1em;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .btn-secondaire {
+      color: var(--bf-sun);
+      background: var(--bf-950);
+      border: 1px solid var(--bf-850);
+    }
+    .btn-secondaire:hover { background: var(--bf-925); }
+    .btn-danger {
+      color: var(--white);
+      background: #ce0500;
+      border: 1px solid #ce0500;
+    }
+    .btn-danger:hover { background: #a51a1a; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="barre-outils">
+      <label for="zoom-range">Taille</label>
+      <input type="range" id="zoom-range" min="70" max="150" step="5" value="100">
+      <output id="zoom-valeur" for="zoom-range">100 %</output>
+    </div>
+    <div id="conteneur-kanban"></div>
+  </div>
+  <script src="logic.js"></script>
+  <script src="widget.js"></script>
+</body>
+</html>

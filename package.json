@@ -1,0 +1,8 @@
+{
+  "name": "kanban-grist",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "bundle": "node scripts/bundle.js"
+  }
+}
