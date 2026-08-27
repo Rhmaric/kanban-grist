@@ -333,6 +333,20 @@ function selectCard(rowId) {
   }
 }
 
+function showAide() {
+  var aide = document.getElementById('page-aide');
+  var app = document.getElementById('app');
+  if (aide) aide.hidden = false;
+  if (app) app.hidden = true;
+}
+
+function showKanban() {
+  var aide = document.getElementById('page-aide');
+  var app = document.getElementById('app');
+  if (aide) aide.hidden = true;
+  if (app) app.hidden = false;
+}
+
 function helpMessage(msg) {
   return '<div style="padding:2em;color:#777;font-size:0.85em;">' + L.escapeHtml(msg) + '</div>';
 }
@@ -666,17 +680,16 @@ function onCardMoved(evt) {
 }
 
 function render(records) {
+  if (!L.isConfigured(currentMappings)) {
+    showAide();
+    return;
+  }
+  showKanban();
+
   var board = document.getElementById('conteneur-kanban');
   board.innerHTML = '';
   zonesByGroupe = {};
 
-  if (!currentMappings || !currentMappings.Titre || !currentMappings.Groupe) {
-    board.innerHTML = helpMessage(
-      'Ouvrez la configuration du widget (parametres de la vue) et choisissez au minimum une colonne '
-      + '"Titre de la carte" (texte) et une colonne "Grouper par" (Choix unique). '
-      + 'L\'ordre des cartes se configure dans l\'onglet "Trier et Filtrer".');
-    return;
-  }
   if (!groupDefs.length) {
     board.innerHTML = helpMessage(
       'La colonne de groupement selectionnee ne definit aucune valeur. Ajoutez des choix a cette colonne '

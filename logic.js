@@ -26,6 +26,10 @@
     return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(n)));
   }
 
+  function isConfigured(mappings) {
+    return !!(mappings && mappings.Titre && mappings.Groupe);
+  }
+
   function canEditFromSearchParams(search) {
     var p = new URLSearchParams(typeof search === 'string' ? search : '');
     if (p.get('readonly') === 'true') return false;
@@ -367,6 +371,7 @@
 
     clampZoom: clampZoom,
     canEditFromSearchParams: canEditFromSearchParams,
+    isConfigured: isConfigured,
 
     parseWidgetOptions: parseWidgetOptions,
     parseCustomViewDef: parseCustomViewDef,

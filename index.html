@@ -43,6 +43,50 @@
       flex-direction: column;
       font-size: calc(16px * var(--zoom));
     }
+    #app[hidden],
+    #page-aide[hidden] { display: none !important; }
+
+    /* ── AIDE (vue non configuree) ── */
+    #page-aide {
+      height: 100vh;
+      overflow-y: auto;
+      padding: 1.4em 1.5em 2em;
+      font-size: 15px;
+      line-height: 1.45;
+      color: var(--grey-text);
+    }
+    .aide {
+      max-width: 42em;
+      margin: 0 auto;
+    }
+    .aide h1 {
+      font-size: 1.25em;
+      font-weight: 700;
+      color: var(--bf-sun);
+      margin-bottom: 0.45em;
+    }
+    .aide h2 {
+      font-size: 0.82em;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--bf-sun);
+      margin: 1.3em 0 0.5em;
+    }
+    .aide p { margin-bottom: 0.7em; }
+    .aide ul {
+      margin: 0 0 0.7em 1.15em;
+    }
+    .aide li { margin-bottom: 0.35em; }
+    .aide strong { font-weight: 700; }
+    .aide-reco {
+      margin-top: 1.1em;
+      padding: 0.9em 1em;
+      background: var(--bf-950);
+      border: 1.5px solid var(--bf-850);
+      border-radius: 10px;
+    }
+    .aide-reco h2 { margin-top: 0; }
 
     /* ── BARRE D'OUTILS ── */
     /* Tailles en px : la barre ne doit pas se redimensionner avec le zoom. */
@@ -466,7 +510,47 @@
   </style>
 </head>
 <body>
-  <div id="app">
+  <div id="page-aide">
+    <article class="aide">
+      <h1>Kanban Grist</h1>
+      <p>
+        Cette vue affiche les lignes d’une table sous forme de tableau Kanban.
+      </p>
+
+      <h2>Pour commencer</h2>
+      <ul>
+        <li>Ouvrez le panneau de configuration</li>
+        <li>Accordez l’accès <strong>document complet</strong>, nécessaire pour créer, déplacer et supprimer des cartes.</li>
+        <li>Associez <strong>Titre de la carte</strong> à une colonne de type "Texte", et <strong>Grouper par</strong> à une colonne de type "Choix unique".</li>
+        <li>Ajoutez éventuellement des <strong>Propriétés visibles</strong> qui seront visibles dans les cartes.</li>
+      </ul>
+      <p>
+        L’ordre des cartes dans une colonne suit l’onglet <strong>Trier et filtrer</strong> de cette vue.
+        Les colonnes du Kanban reprennent les choix, l’ordre et les couleurs définis par la colonne de type "Choix unique" sélectionnée. Pour modifier les intitulés de colonnes ou leur ordre, il faut modifier la colonne de type "Choix unique" sélectionnée.
+      </p>
+
+      <h2>Fonctionnalités</h2>
+      <ul>
+        <li>Glisser-déposer une carte d’une colonne à l’autre pour changer sa valeur de groupe.</li>
+        <li>Cliquer une carte la sélectionne : les autres vues de la page peuvent utiliser « Sélectionner par » sur ce Kanban.</li>
+        <li>Le bouton « + » (entête ou pied de colonne) crée une carte dans cette colonne ; une icône corbeille au survol la supprime après confirmation.</li>
+        <li>Le curseur « Taille » ajuste l’échelle d’affichage ; le réglage est mémorisé pour le document.</li>
+      </ul>
+
+      <div class="aide-reco">
+        <h2>Recommandation</h2>
+        <p>
+          Associez ce Kanban à une <strong>vue Fiche</strong> sur la même page, placée sur le côté,
+          avec « Sélectionner par » = ce Kanban.
+        </p>
+        <p>
+          Le Kanban sert à parcourir et déplacer les cartes ; la fiche affiche et modifie le détail
+          (titre, propriétés).
+        </p>
+      </div>
+    </article>
+  </div>
+  <div id="app" hidden>
     <div id="barre-outils">
       <label for="zoom-range">Taille</label>
       <input type="range" id="zoom-range" min="70" max="150" step="5" value="100">

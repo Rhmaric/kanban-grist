@@ -49,6 +49,15 @@ test('buildPropDefs: ignore les colonnes non mappees, prepare les badges Choice'
   assert.equal(props[1].isChoice, false);
 });
 
+test('isConfigured: Titre et Groupe doivent etre mappes', function () {
+  assert.equal(L.isConfigured(null), false);
+  assert.equal(L.isConfigured({}), false);
+  assert.equal(L.isConfigured({ Titre: 'Nom' }), false);
+  assert.equal(L.isConfigured({ Groupe: 'Statut' }), false);
+  assert.equal(L.isConfigured({ Titre: 'Nom', Groupe: 'Statut' }), true);
+  assert.equal(L.isConfigured({ Titre: 'Nom', Groupe: 'Statut', Proprietes: ['Note'] }), true);
+});
+
 test('buildAttachmentMeta: table _grist_Attachments → { id: {name, type} }', function () {
   assert.deepEqual(
     L.buildAttachmentMeta({
