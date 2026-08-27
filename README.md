@@ -17,6 +17,19 @@ npm test                 # tests unitaires (logic.js)
 npm run bundle           # génère dist/index.html + dist/widget.bundle.js
 ```
 
+## Publication
+
+Le workflow **Publier le widget** (onglet Actions) lance les tests, crée une release GitHub et déploie le bundle sur GitHub Pages. L'URL publique ainsi obtenue se colle dans Grist (vue personnalisée → URL personnalisée).
+
+### Première mise en service
+
+1. Dans le dépôt : **Settings → Pages → Build and deployment → Source** = **GitHub Actions**.
+2. **Actions → Publier le widget → Run workflow**, avec une version semver (`1.0.0`).
+
+L'URL du widget est `https://<compte>.github.io/kanban-grist/` (pour ce dépôt : [https://rhmaric.github.io/kanban-grist/](https://rhmaric.github.io/kanban-grist/)). Accorder ensuite l'accès **document complet** dans Grist, requis pour créer, déplacer et supprimer des cartes.
+
+Une version préliminaire (`1.0.0-beta.1`) crée une release sans remplacer l'URL GitHub Pages.
+
 ## Configuration
 
 Tout se règle dans le panneau de configuration de la vue Grist.

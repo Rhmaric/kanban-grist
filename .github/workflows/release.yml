@@ -1,0 +1,106 @@
+# Publie le widget Grist : tests, release GitHub, puis GitHub Pages.
+# Déclenchement : Actions → Publier le widget → Run workflow.
+name: Publier le widget
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version semver sans préfixe v (ex. 1.0.0). Un suffixe (-beta.1) crée une préversion sans remplacer Pages.
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: publish-widget
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Tester, empaqueter et publier la release
+    runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+
+      - name: Valider la version
+        id: meta
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          raw="$(printf '%s' "$RAW_VERSION" | tr -d '[:space:]')"
+          raw="${raw#v}"
+          if [[ ! "$raw" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Version invalide. Attendu : 1.2.3 ou 1.2.3-beta.1"
+            exit 1
+          fi
+          if gh release view "v${raw}" >/dev/null 2>&1; then
+            echo "::error::La release v${raw} existe déjà."
+            exit 1
+          fi
+          echo "version=${raw}" >> "$GITHUB_OUTPUT"
+          if [[ "$raw" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Tests
+        run: npm test
+
+      - name: Bundle
+        run: npm run bundle
+
+      - name: Configurer GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Créer la release GitHub
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ steps.meta.outputs.version }}
+          name: v${{ steps.meta.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
+          files: |
+            dist/index.html
+            dist/widget.bundle.js
+          body: |
+            Widget Kanban Grist **v${{ steps.meta.outputs.version }}**.
+
+            URL publique à coller dans Grist (vue personnalisée → URL personnalisée) :
+
+            ${{ steps.pages.outputs.base_url }}
+
+      - name: Envoyer l'artefact Pages
+        if: steps.meta.outputs.prerelease != 'true'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    name: Déployer sur GitHub Pages
+    needs: build
+    if: needs.build.outputs.prerelease != 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publier GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
