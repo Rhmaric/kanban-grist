@@ -96,8 +96,10 @@ grist.ready({
   requiredAccess: 'full',
   allowSelectBy: true,
   columns: [
-    { name: 'Titre',      title: 'Titre de la carte',   type: 'Text' },
-    { name: 'Groupe',     title: 'Grouper par',         type: 'Choice' },
+    // optional: sinon Grist affiche son overlay "Some required columns aren't mapped"
+    // et masque notre ecran d'aide tant que Titre / Groupe ne sont pas mappes.
+    { name: 'Titre',      title: 'Titre de la carte',   type: 'Text', optional: true },
+    { name: 'Groupe',     title: 'Grouper par',         type: 'Choice', optional: true },
     { name: 'Proprietes', title: 'Proprietes visibles', type: 'Any', allowMultiple: true, optional: true },
   ],
 });
