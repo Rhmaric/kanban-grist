@@ -8,6 +8,9 @@ var path = require('path');
 var root = path.join(__dirname, '..');
 var dist = path.join(root, 'dist');
 
+// Schema (https:, data:, javascript:...) ou URL relative au protocole (//hote).
+var EXTERNAL_URL = /^\s*([a-z][a-z0-9+.-]*:|\/\/)/i;
+
 function findIndexFiles(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).reduce(function (acc, entry) {
     var full = path.join(dir, entry.name);
@@ -33,18 +36,23 @@ function checkPage(file) {
   var dir = path.dirname(file);
   var html = fs.readFileSync(file, 'utf8');
 
-  var scriptTag = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  // Une balise fermante peut porter des espaces ou des attributs ignores (</script >, </script x>).
+  // Toute forme non couverte fait echouer le comptage ci-dessous : le controle echoue par defaut.
+  var scriptTag = /<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi;
+  var scriptCount = 0;
   var m;
   while ((m = scriptTag.exec(html))) {
-    var src = /\bsrc="([^"]*)"/i.exec(m[1]);
-    if (!src) errors.push('script inline');
-    else if (/^(https?:)?\/\//i.test(src[1])) errors.push('script externe : ' + src[1]);
+    scriptCount++;
+    var src = /\bsrc\s*=\s*(["'])(.*?)\1/i.exec(m[1]);
+    if (!src) errors.push('script sans src entre guillemets');
+    else if (EXTERNAL_URL.test(src[2])) errors.push('script externe : ' + src[2]);
     if (m[2].trim()) errors.push('contenu de script inline');
   }
+  if ((html.match(/<script\b/gi) || []).length !== scriptCount) errors.push('balise <script> non reconnue');
 
-  var linkTag = /<link\b[^>]*\bhref="([^"]*)"/gi;
+  var linkTag = /<link\b[^>]*\bhref\s*=\s*(["'])(.*?)\1/gi;
   while ((m = linkTag.exec(html))) {
-    if (/^(https?:)?\/\//i.test(m[1])) errors.push('ressource externe : ' + m[1]);
+    if (EXTERNAL_URL.test(m[2])) errors.push('ressource externe : ' + m[2]);
   }
 
   if (/<style\b/i.test(html)) errors.push('balise <style> inline');
