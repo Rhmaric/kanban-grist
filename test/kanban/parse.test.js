@@ -4,7 +4,7 @@
 
 var test = require('node:test');
 var assert = require('node:assert/strict');
-var L = require('../logic.js');
+var L = require('../../kanban/logic.js');
 
 test('parseWidgetOptions: JSON invalide → objet vide (colonne sans options)', function () {
   assert.deepEqual(L.parseWidgetOptions(null), {});

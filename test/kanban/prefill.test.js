@@ -5,7 +5,7 @@
 
 var test = require('node:test');
 var assert = require('node:assert/strict');
-var L = require('../logic.js');
+var L = require('../../kanban/logic.js');
 
 test('encodeCommonPrefill: valeur commune, Ref vide (=0) valide, divergence → rien', function () {
   assert.equal(L.encodeCommonPrefill({ type: 'Text' }, ['a', 'a']), 'a');

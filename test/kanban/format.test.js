@@ -4,7 +4,7 @@
 
 var test = require('node:test');
 var assert = require('node:assert/strict');
-var L = require('../logic.js');
+var L = require('../../kanban/logic.js');
 
 test('formatScalar: Bool, Ref, liste, Date (secondes epoch Grist)', function () {
   assert.equal(L.formatScalar('Bool', true), 'Oui');
