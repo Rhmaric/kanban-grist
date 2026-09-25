@@ -5,7 +5,7 @@
 
 var test = require('node:test');
 var assert = require('node:assert/strict');
-var L = require('../logic.js');
+var L = require('../../kanban/logic.js');
 
 test('canEditFromSearchParams: full (ou absent) editable, sinon lecture seule', function () {
   // Hors Grist / ancienne API : pas de params → on laisse les boutons visibles.

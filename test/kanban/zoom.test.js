@@ -5,7 +5,7 @@
 
 var test = require('node:test');
 var assert = require('node:assert/strict');
-var L = require('../logic.js');
+var L = require('../../kanban/logic.js');
 
 test('clampZoom: valeurs absentes → defaut, sinon borne [min, max]', function () {
   assert.equal(L.clampZoom(null), L.ZOOM_DEFAUT);

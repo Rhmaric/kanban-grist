@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- img-src / frame-src https: : visionneuse des pieces jointes, servies par l'instance Grist (domaine inconnu a l'avance). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https:; frame-src https:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+  <title>Kanban Grist</title>
+  <script src="../vendor/grist-plugin-api.js"></script>
+  <script src="../vendor/Sortable.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="page-aide">
+    <article class="aide">
+      <h1>Kanban Grist</h1>
+      <p>
+        Cette vue affiche les lignes d’une table sous forme de tableau Kanban.
+      </p>
+
+      <h2>Pour commencer</h2>
+      <ul>
+        <li>Ouvrez le panneau de configuration</li>
+        <li>Accordez l’accès <strong>document complet</strong>, nécessaire pour créer, déplacer et supprimer des cartes.</li>
+        <li>Associez <strong>Titre de la carte</strong> à une colonne de type "Texte", et <strong>Grouper par</strong> à une colonne de type "Choix unique".</li>
+        <li>Ajoutez éventuellement des <strong>Propriétés visibles</strong> qui seront visibles dans les cartes.</li>
+      </ul>
+      <p>
+        L’ordre des cartes dans une colonne suit l’onglet <strong>Trier et filtrer</strong> de cette vue.
+        Les colonnes du Kanban reprennent les choix, l’ordre et les couleurs définis par la colonne de type "Choix unique" sélectionnée. Pour modifier les intitulés de colonnes ou leur ordre, il faut modifier la colonne de type "Choix unique" sélectionnée.
+      </p>
+
+      <h2>Fonctionnalités</h2>
+      <ul>
+        <li>Glisser-déposer une carte d’une colonne à l’autre pour changer sa valeur de groupe.</li>
+        <li>Cliquer une carte la sélectionne : les autres vues de la page peuvent utiliser « Sélectionner par » sur ce Kanban.</li>
+        <li>Le bouton « + » (entête ou pied de colonne) crée une carte dans cette colonne ; une icône corbeille au survol la supprime après confirmation.</li>
+        <li>Le curseur « Taille » ajuste l’échelle d’affichage ; le réglage est mémorisé pour le document.</li>
+      </ul>
+
+      <div class="aide-reco">
+        <h2>Recommandation</h2>
+        <p>
+          Associez ce Kanban à une <strong>vue Fiche</strong> sur la même page, placée sur le côté,
+          avec « Sélectionner par » = ce Kanban.
+        </p>
+        <p>
+          Le Kanban sert à parcourir et déplacer les cartes ; la fiche affiche et modifie le détail
+          (titre, propriétés).
+        </p>
+      </div>
+    </article>
+  </div>
+  <div id="app" hidden>
+    <div id="barre-outils">
+      <label for="zoom-range">Taille</label>
+      <input type="range" id="zoom-range" min="70" max="150" step="5" value="100">
+      <output id="zoom-valeur" for="zoom-range">100 %</output>
+    </div>
+    <div id="conteneur-kanban"></div>
+  </div>
+  <script src="logic.js"></script>
+  <script src="widget.js"></script>
+</body>
+</html>

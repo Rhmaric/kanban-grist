@@ -4,7 +4,7 @@
 
 var test = require('node:test');
 var assert = require('node:assert/strict');
-var L = require('../logic.js');
+var L = require('../../kanban/logic.js');
 
 test('formatScalar: Bool, Ref, liste, Date (secondes epoch Grist)', function () {
   assert.equal(L.formatScalar('Bool', true), 'Oui');
@@ -36,8 +36,4 @@ test('isImageAttachment / isPdfAttachment: routage de la visionneuse', function 
   assert.equal(L.isPdfAttachment({ type: 'application/pdf' }), true);
   assert.equal(L.isPdfAttachment({ name: 'doc.pdf' }), true);
   assert.equal(L.isPdfAttachment({ name: 'doc.txt' }), false);
-});
-
-test('escapeHtml: messages d aide injectes en innerHTML', function () {
-  assert.equal(L.escapeHtml('<b>&"\''), '&lt;b&gt;&amp;&quot;&#39;');
 });

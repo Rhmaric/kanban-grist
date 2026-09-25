@@ -4,7 +4,7 @@
 
 var test = require('node:test');
 var assert = require('node:assert/strict');
-var L = require('../logic.js');
+var L = require('../../kanban/logic.js');
 
 test('buildChoiceDefs: couleurs des colonnes Kanban (choix + repli)', function () {
   var defs = L.buildChoiceDefs({

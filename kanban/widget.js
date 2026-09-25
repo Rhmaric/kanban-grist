@@ -15,14 +15,33 @@ const ZOOM_PERSIST_DELAI = 300;
 const TOAST_DUREE = 5000;
 const NOUVELLE_CARTE_DELAI = 1500;
 
-const ICONE_PLUS = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
-  + '<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>';
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
-const ICONE_CORBEILLE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
-  + '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke="currentColor" '
-  + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICONE_PLUS = { d: 'M12 5v14M5 12h14', strokeWidth: '2.5' };
+const ICONE_CORBEILLE = { d: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3', strokeWidth: '2' };
+const ICONE_TROMBONE = {
+  d: 'M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.49',
+  strokeWidth: '2',
+};
 
 const CAN_EDIT = L.canEditFromSearchParams(window.location.search);
+
+function svgIcon(icone) {
+  var svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width', '12');
+  svg.setAttribute('height', '12');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('aria-hidden', 'true');
+  var p = document.createElementNS(SVG_NS, 'path');
+  p.setAttribute('d', icone.d);
+  p.setAttribute('stroke', 'currentColor');
+  p.setAttribute('stroke-width', icone.strokeWidth);
+  p.setAttribute('stroke-linecap', 'round');
+  p.setAttribute('stroke-linejoin', 'round');
+  svg.appendChild(p);
+  return svg;
+}
 
 // ============================================================================
 // ETAT
@@ -350,7 +369,10 @@ function showKanban() {
 }
 
 function helpMessage(msg) {
-  return '<div style="padding:2em;color:#777;font-size:0.85em;">' + L.escapeHtml(msg) + '</div>';
+  var el = document.createElement('div');
+  el.className = 'message-aide';
+  el.textContent = msg;
+  return el;
 }
 
 // ============================================================================
@@ -493,9 +515,7 @@ function makeAttachmentButton(attId, idx, total) {
   btn.title = 'Ouvrir la piece jointe';
   var icon = document.createElement('span');
   icon.className = 'carte-attach-icon';
-  icon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
-    '<path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.49" ' +
-    'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  icon.appendChild(svgIcon(ICONE_TROMBONE));
   var lab = document.createElement('span');
   lab.className = 'carte-attach-label';
   lab.textContent = label;
@@ -575,7 +595,7 @@ function makeDeleteButton(rowId, titre) {
   btn.type = 'button';
   btn.className = 'carte-supprimer';
   btn.title = 'Supprimer la carte';
-  btn.innerHTML = ICONE_CORBEILLE;
+  btn.appendChild(svgIcon(ICONE_CORBEILLE));
   btn.onclick = function (e) {
     e.stopPropagation();
     confirmDeleteCard(rowId, titre);
@@ -618,7 +638,7 @@ function makeHeaderAddButton(groupeId) {
   btn.type = 'button';
   btn.className = 'entete-ajout';
   btn.title = 'Ajouter une carte';
-  btn.innerHTML = ICONE_PLUS;
+  btn.appendChild(svgIcon(ICONE_PLUS));
   btn.onclick = function () { createCard(groupeId); };
   return btn;
 }
@@ -627,7 +647,10 @@ function makeFooterAddButton(groupeId) {
   var btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'pied-ajout';
-  btn.innerHTML = ICONE_PLUS + '<span>Ajouter une carte</span>';
+  var texte = document.createElement('span');
+  texte.textContent = 'Ajouter une carte';
+  btn.appendChild(svgIcon(ICONE_PLUS));
+  btn.appendChild(texte);
   btn.onclick = function () { createCard(groupeId); };
   return btn;
 }
@@ -693,9 +716,9 @@ function render(records) {
   zonesByGroupe = {};
 
   if (!groupDefs.length) {
-    board.innerHTML = helpMessage(
+    board.appendChild(helpMessage(
       'La colonne de groupement selectionnee ne definit aucune valeur. Ajoutez des choix a cette colonne '
-      + 'dans Grist (vous pourrez aussi les reordonner par glisser-deposer dans l\'editeur de colonne).');
+      + 'dans Grist (vous pourrez aussi les reordonner par glisser-deposer dans l\'editeur de colonne).'));
     return;
   }
 

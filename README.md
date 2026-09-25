@@ -1,78 +1,89 @@
-# Kanban Grist
+# Widgets Grist
 
-Widget personnalisé Grist affichant les lignes d'une table sous forme de tableau Kanban.
+Widgets personnalisés pour [Grist](https://www.getgrist.com/). La configuration et le fonctionnement de chacun sont décrits dans son propre README :
+
+| Widget | Documentation | URL à coller dans Grist |
+| --- | --- | --- |
+| Kanban | [kanban/README.md](kanban/README.md) | [https://rhmaric.github.io/kanban-grist/](https://rhmaric.github.io/kanban-grist/) |
+| Matrice des risques | [risk-matrix/README.md](risk-matrix/README.md) | [https://rhmaric.github.io/kanban-grist/risk-matrix/](https://rhmaric.github.io/kanban-grist/risk-matrix/) |
 
 ## Contenu
 
-- `index.html` — structure et styles de la vue
+Chaque widget a son dossier (`kanban/`, `risk-matrix/`), avec le même découpage :
+
+- `README.md` — configuration et fonctionnement
+- `index.html` — structure de la vue
+- `styles.css` — styles
 - `logic.js` — logique pure (testable)
 - `widget.js` — câblage Grist / DOM
 
-Dépendances chargées par CDN : l'API plugin Grist et SortableJS (glisser-déposer).
+Les tests sont rangés de la même façon dans `test/kanban/` et `test/risk-matrix/`.
+
+Les deux dépendances, l'API plugin Grist et SortableJS (glisser-déposer), sont téléchargées dans `vendor/` (non versionné) puis intégrées au bundle : aucune ressource n'est chargée depuis un domaine tiers à l'exécution.
 
 ## Développement
 
 ```bash
-npm test                 # tests unitaires (logic.js)
-npm run bundle           # génère dist/index.html + dist/widget.bundle.js
+npm ci                   # outils de développement (ESLint)
+npm run vendor:update    # télécharge les dépendances des widgets dans vendor/
+npm run check            # lint, tests, contrôle de vendor/, bundle et contrôle de dist/
 ```
+
+Scripts unitaires : `npm run lint`, `npm test`, `npm run check:vendor`, `npm run bundle` (génère `dist/` pour le kanban et `dist/risk-matrix/` pour la matrice) et `npm run check:dist`.
+
+## Intégration continue
+
+Le workflow **CI** tourne sur chaque pull request et chaque push sur `main` :
+
+- `npm audit` sur les outils de développement ;
+- ESLint avec des règles de sécurité : `no-eval`, `no-implied-eval`, `no-new-func`, `no-script-url` et `no-unsanitized`, qui refuse tout `innerHTML` alimenté par autre chose qu'un littéral ;
+- tests unitaires ;
+- téléchargement de `vendor/` et contrôle qu'aucune dépendance n'utilise `eval` ou `new Function` ;
+- bundle, puis contrôle des pages de `dist/` : pas de script ni de ressource externe, pas de script, style ou gestionnaire d'événement inline, CSP stricte présente ;
+- analyse CodeQL (requêtes `security-extended`).
+
+## Sécurité
+
+### Content Security Policy
+
+Chaque page embarque une CSP en balise meta, GitHub Pages ne permettant pas d'en-têtes HTTP :
+
+```
+default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none';
+form-action 'none'; base-uri 'none'; object-src 'none'
+```
+
+Scripts et styles ne peuvent venir que du widget lui-même, et le widget ne peut émettre aucune requête réseau (`connect-src 'none'`) : un code injecté ne pourrait pas envoyer les données du document vers un serveur tiers par `fetch` ou XHR. Grist communique avec le widget par `postMessage`, que la CSP ne restreint pas.
+
+Le kanban autorise en plus `img-src https:` et `frame-src https:` pour sa visionneuse de pièces jointes, servies par l'instance Grist dont le domaine n'est pas connu à l'avance (voir [kanban/README.md](kanban/README.md#sécurité)).
+
+Limites :
+
+- en balise meta, `frame-ancestors` et `report-uri` sont ignorés par les navigateurs ;
+- `img-src https:` laisse au kanban la possibilité de charger une image depuis n'importe quel domaine HTTPS, ce qui reste un canal d'exfiltration possible par l'URL d'une image.
+
+### Dépendances
+
+`npm run vendor:update` télécharge :
+
+- l'API plugin depuis `https://grist.numerique.gouv.fr/grist-plugin-api.js`. Celle de `docs.getgrist.com` est un build webpack de développement truffé d'`eval`, que la CSP bloquerait ;
+- SortableJS depuis le registre npm, en version épinglée dans le script, avec vérification de l'intégrité du tarball annoncée par le registre.
+
+`vendor/` n'est pas versionné et ses empreintes ne sont pas vérifiées : chaque build embarque la version de l'API plugin servie à cet instant.
+
+### Droits demandés
+
+Les deux widgets demandent l'accès **document complet**, seul niveau Grist qui permette d'écrire. Il donne aussi accès en lecture et en écriture à toutes les tables du document : ne l'accorder qu'à une URL de widget de confiance.
 
 ## Publication
 
-Le workflow **Publier le widget** (onglet Actions) lance les tests, crée une release GitHub et déploie le bundle sur GitHub Pages. L'URL publique ainsi obtenue se colle dans Grist (vue personnalisée → URL personnalisée).
+Le workflow **Publier le widget** (onglet Actions) rejoue d'abord la CI complète, crée une release GitHub et déploie le bundle sur GitHub Pages. L'URL publique ainsi obtenue se colle dans Grist (vue personnalisée → URL personnalisée).
 
 ### Première mise en service
 
 1. Dans le dépôt : **Settings → Pages → Build and deployment → Source** = **GitHub Actions**.
 2. **Actions → Publier le widget → Run workflow**, avec une version semver (`1.0.0`).
 
-L'URL du widget est `https://<compte>.github.io/kanban-grist/` (pour ce dépôt : [https://rhmaric.github.io/kanban-grist/](https://rhmaric.github.io/kanban-grist/)). Accorder ensuite l'accès **document complet** dans Grist, requis pour créer, déplacer et supprimer des cartes.
+Les widgets sont alors servis sur `https://<compte>.github.io/kanban-grist/` (Kanban) et `https://<compte>.github.io/kanban-grist/risk-matrix/` (matrice des risques). Accorder ensuite l'accès **document complet** dans Grist ; le détail de la configuration est dans le README de chaque widget (voir [le tableau en tête](#widgets-grist)).
 
 Une version préliminaire (`1.0.0-beta.1`) crée une release sans remplacer l'URL GitHub Pages.
-
-## Configuration
-
-Tout se règle dans le panneau de configuration de la vue Grist.
-
-| Option | Type attendu | Rôle |
-| --- | --- | --- |
-| Titre de la carte | Texte | Libellé affiché en haut de chaque carte (obligatoire) |
-| Grouper par | Choix unique | Définit les colonnes du Kanban (obligatoire) |
-| Propriétés visibles | Toute colonne, multiple | Champs affichés sous le titre (facultatif) |
-
-Les colonnes du tableau correspondent aux valeurs de la colonne « Grouper par », dans leur ordre et avec les couleurs définies dans l'éditeur de colonne Grist. Réordonner ou recolorer les choix dans Grist se répercute directement sur le Kanban.
-
-Les propriétés visibles sont en lecture seule et rendues selon leur type : badges colorés pour les colonnes Choix et Liste de choix, dates localisées, liens cliquables, et pièces jointes ouvertes dans une visionneuse intégrée (images et PDF affichés en ligne, téléchargement proposé sinon).
-
-Un curseur « Taille » en haut à droite ajuste l'échelle d'affichage entre 50 % et 150 %. La valeur est mémorisée dans les options du widget, donc partagée par le document et restaurée au rechargement ; un utilisateur en lecture seule bénéficie du réglage pour sa session sans qu'il soit enregistré.
-
-## Sélection
-
-Cliquer sur une carte la met en évidence et positionne le curseur Grist sur la ligne correspondante. Le widget déclare `allowSelectBy`, ce qui permet aux autres vues de la page d'utiliser « Sélectionner par » sur ce Kanban et de se filtrer sur la carte active. Déplacer une carte la sélectionne également. Si la ligne sélectionnée disparaît (filtre ou suppression), la sélection est oubliée.
-
-## Filtres et tri
-
-Le widget consomme les enregistrements tels que Grist les lui transmet : les filtres et le tri définis dans l'onglet « Trier et filtrer » de la vue s'appliquent donc au Kanban. Le tri de la vue détermine l'ordre des cartes à l'intérieur de chaque colonne.
-
-## Écriture
-
-Trois actions modifient le document : le déplacement d'une carte vers une autre colonne, qui change sa valeur de groupe, la création d'une carte et sa suppression. L'ordre à l'intérieur d'une colonne n'est pas persisté, puisqu'il découle du tri de la vue. Titre et propriétés se modifient depuis Grist (vue fiche par exemple).
-
-Un bouton « + » dans l'entête de chaque colonne et un bouton en pied de colonne créent une carte vide dans cette colonne, sans formulaire intermédiaire : la carte est ajoutée puis sélectionnée, l'édition se fait ensuite dans Grist. Une icône corbeille apparaît au survol de chaque carte et demande confirmation avant suppression définitive.
-
-Ces boutons ne sont pas affichés lorsque le document est ouvert en lecture seule ou que le widget ne dispose pas de l'accès complet.
-
-### Création et filtres
-
-Pour qu'une carte créée dans une vue filtrée ne disparaisse pas aussitôt, le widget la préremplit avant de l'enregistrer, à partir :
-
-- des filtres **enregistrés** de la vue (métadonnées `_grist_Filters`), lorsque la section du widget peut être identifiée ;
-- du linking **Sélectionner par** : toute colonne Référence (ou Liste de références) qui a la même valeur sur toutes les cartes déjà visibles est recopiée sur la nouvelle carte — c'est typiquement la colonne qui relie le Kanban à la vue source (ex. l'offre sélectionnée).
-
-L'API des widgets n'exposant ni les filtres ni le curseur de la vue source, cela implique :
-
-- seuls les filtres **enregistrés** sont pris en compte ; un filtre posé sans être sauvegardé reste côté client et demeure invisible du widget ;
-- seuls les filtres par valeurs incluses sont exploités, la première valeur de la liste étant retenue ; les filtres par exclusion et les plages de valeurs sont ignorés ;
-- si le tableau est vide à cause du « Sélectionner par » (aucune carte pour la ligne source choisie), la valeur du lien ne peut pas être déduite.
-
-Quand la carte créée n'est malgré tout pas visible parce que les filtres ou le linking actifs l'excluent, un message le signale plutôt que de laisser croire à un échec de la création.

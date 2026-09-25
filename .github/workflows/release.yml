@@ -1,4 +1,4 @@
-# Publie le widget Grist : tests, release GitHub, puis GitHub Pages.
+# Publie les widgets Grist : controles de la CI, release GitHub, puis GitHub Pages.
 # Déclenchement : Actions → Publier le widget → Run workflow.
 name: Publier le widget
 
@@ -11,23 +11,34 @@ on:
         type: string
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: publish-widget
   cancel-in-progress: false
 
 jobs:
+  ci:
+    name: Controles
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      security-events: write
+
   build:
-    name: Tester, empaqueter et publier la release
+    name: Empaqueter et publier la release
+    needs: ci
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
     outputs:
       prerelease: ${{ steps.meta.outputs.prerelease }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Installer Node.js
         uses: actions/setup-node@v5
@@ -47,7 +58,7 @@ jobs:
             echo "::error::Version invalide. Attendu : 1.2.3 ou 1.2.3-beta.1"
             exit 1
           fi
-          if gh release view "v${raw}" >/dev/null 2>&1; then
+          if gh release view "v${raw}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "::error::La release v${raw} existe déjà."
             exit 1
           fi
@@ -58,11 +69,20 @@ jobs:
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Tests
-        run: npm test
+      - name: Telecharger les dependances des widgets
+        run: npm run vendor:update
 
       - name: Bundle
-        run: npm run bundle
+        run: npm run bundle && npm run check:vendor && npm run check:dist
+
+      # Les assets d'une release sont indexes par nom de fichier : on prefixe ceux de la matrice.
+      - name: Préparer les assets de la release
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          for f in index.html widget.bundle.js styles.css; do
+            cp "dist/risk-matrix/$f" "release-assets/risk-matrix-$f"
+          done
 
       - name: Configurer GitHub Pages
         id: pages
@@ -79,12 +99,17 @@ jobs:
           files: |
             dist/index.html
             dist/widget.bundle.js
+            dist/styles.css
+            release-assets/risk-matrix-index.html
+            release-assets/risk-matrix-widget.bundle.js
+            release-assets/risk-matrix-styles.css
           body: |
-            Widget Kanban Grist **v${{ steps.meta.outputs.version }}**.
+            Widgets Grist **v${{ steps.meta.outputs.version }}**.
 
-            URL publique à coller dans Grist (vue personnalisée → URL personnalisée) :
+            URLs publiques à coller dans Grist (vue personnalisée → URL personnalisée) :
 
-            ${{ steps.pages.outputs.base_url }}
+            - Kanban : ${{ steps.pages.outputs.base_url }}
+            - Matrice des risques : ${{ steps.pages.outputs.base_url }}/risk-matrix/
 
       - name: Envoyer l'artefact Pages
         if: steps.meta.outputs.prerelease != 'true'
@@ -97,6 +122,9 @@ jobs:
     needs: build
     if: needs.build.outputs.prerelease != 'true'
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
