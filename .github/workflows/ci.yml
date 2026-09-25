@@ -1,0 +1,74 @@
+# Verifie la sante du code : lint de securite, tests, bundle et controle des pages publiees.
+# Egalement appele par le workflow de publication avant toute release.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, tests et controle du bundle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Installer les dependances de developpement
+        run: npm ci
+
+      - name: Audit des dependances
+        run: npm audit --audit-level=high
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      - name: Telecharger les dependances des widgets
+        run: npm run vendor:update
+
+      - name: Controler les dependances des widgets
+        run: npm run check:vendor
+
+      - name: Bundle
+        run: npm run bundle
+
+      - name: Controler les pages publiees
+        run: npm run check:dist
+
+  codeql:
+    name: Analyse CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Initialiser CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+
+      - name: Analyser
+        uses: github/codeql-action/analyze@v4

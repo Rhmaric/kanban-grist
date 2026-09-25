@@ -4,22 +4,79 @@ Widget personnalisé Grist affichant les lignes d'une table sous forme de tablea
 
 ## Contenu
 
-- `index.html` — structure et styles de la vue
+Deux widgets, chacun dans son dossier avec le même découpage :
+
+- `kanban/` — le tableau Kanban
+- `risk-matrix/` — la [matrice des risques](#matrice-des-risques)
+
+Dans chaque dossier :
+
+- `index.html` — structure de la vue
+- `styles.css` — styles
 - `logic.js` — logique pure (testable)
 - `widget.js` — câblage Grist / DOM
 
-Dépendances chargées par CDN : l'API plugin Grist et SortableJS (glisser-déposer).
+Les tests sont rangés de la même façon dans `test/kanban/` et `test/risk-matrix/`.
+
+Les deux dépendances, l'API plugin Grist et SortableJS (glisser-déposer), sont téléchargées dans `vendor/` (non versionné) puis intégrées au bundle : aucune ressource n'est chargée depuis un domaine tiers à l'exécution.
 
 ## Développement
 
 ```bash
-npm test                 # tests unitaires (logic.js)
-npm run bundle           # génère dist/index.html + dist/widget.bundle.js
+npm ci                   # outils de développement (ESLint)
+npm run vendor:update    # télécharge les dépendances des widgets dans vendor/
+npm run check            # lint, tests, contrôle de vendor/, bundle et contrôle de dist/
 ```
+
+Scripts unitaires : `npm run lint`, `npm test`, `npm run check:vendor`, `npm run bundle` (génère `dist/` pour le kanban et `dist/risk-matrix/` pour la matrice) et `npm run check:dist`.
+
+## Intégration continue
+
+Le workflow **CI** tourne sur chaque pull request et chaque push sur `main` :
+
+- `npm audit` sur les outils de développement ;
+- ESLint avec des règles de sécurité : `no-eval`, `no-implied-eval`, `no-new-func`, `no-script-url` et `no-unsanitized`, qui refuse tout `innerHTML` alimenté par autre chose qu'un littéral ;
+- tests unitaires ;
+- téléchargement de `vendor/` et contrôle qu'aucune dépendance n'utilise `eval` ou `new Function` ;
+- bundle, puis contrôle des pages de `dist/` : pas de script ni de ressource externe, pas de script, style ou gestionnaire d'événement inline, CSP stricte présente ;
+- analyse CodeQL (requêtes `security-extended`).
+
+## Sécurité
+
+### Content Security Policy
+
+Chaque page embarque une CSP en balise meta, GitHub Pages ne permettant pas d'en-têtes HTTP :
+
+```
+default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none';
+form-action 'none'; base-uri 'none'; object-src 'none'
+```
+
+Scripts et styles ne peuvent venir que du widget lui-même, et le widget ne peut émettre aucune requête réseau (`connect-src 'none'`) : un code injecté ne pourrait pas envoyer les données du document vers un serveur tiers par `fetch` ou XHR. Grist communique avec le widget par `postMessage`, que la CSP ne restreint pas.
+
+Le kanban autorise en plus `img-src https:` et `frame-src https:` pour sa visionneuse de pièces jointes, servies par l'instance Grist dont le domaine n'est pas connu à l'avance.
+
+Limites :
+
+- en balise meta, `frame-ancestors` et `report-uri` sont ignorés par les navigateurs ;
+- `img-src https:` laisse au kanban la possibilité de charger une image depuis n'importe quel domaine HTTPS, ce qui reste un canal d'exfiltration possible par l'URL d'une image.
+
+### Dépendances
+
+`npm run vendor:update` télécharge :
+
+- l'API plugin depuis `https://grist.numerique.gouv.fr/grist-plugin-api.js`. Celle de `docs.getgrist.com` est un build webpack de développement truffé d'`eval`, que la CSP bloquerait ;
+- SortableJS depuis le registre npm, en version épinglée dans le script, avec vérification de l'intégrité du tarball annoncée par le registre.
+
+`vendor/` n'est pas versionné et ses empreintes ne sont pas vérifiées : chaque build embarque la version de l'API plugin servie à cet instant.
+
+### Droits demandés
+
+Les deux widgets demandent l'accès **document complet**, seul niveau Grist qui permette d'écrire. Il donne aussi accès en lecture et en écriture à toutes les tables du document : ne l'accorder qu'à une URL de widget de confiance.
 
 ## Publication
 
-Le workflow **Publier le widget** (onglet Actions) lance les tests, crée une release GitHub et déploie le bundle sur GitHub Pages. L'URL publique ainsi obtenue se colle dans Grist (vue personnalisée → URL personnalisée).
+Le workflow **Publier le widget** (onglet Actions) rejoue d'abord la CI complète, crée une release GitHub et déploie le bundle sur GitHub Pages. L'URL publique ainsi obtenue se colle dans Grist (vue personnalisée → URL personnalisée).
 
 ### Première mise en service
 
@@ -76,3 +133,23 @@ L'API des widgets n'exposant ni les filtres ni le curseur de la vue source, cela
 - si le tableau est vide à cause du « Sélectionner par » (aucune carte pour la ligne source choisie), la valeur du lien ne peut pas être déduite.
 
 Quand la carte créée n'est malgré tout pas visible parce que les filtres ou le linking actifs l'excluent, un message le signale plutôt que de laisser croire à un échec de la création.
+
+## Matrice des risques
+
+Second widget, publié sur `https://<compte>.github.io/kanban-grist/risk-matrix/` (pour ce dépôt : [https://rhmaric.github.io/kanban-grist/risk-matrix/](https://rhmaric.github.io/kanban-grist/risk-matrix/)). Il place chaque ligne de la table dans une matrice 4 × 4 Gravité × Probabilité, sous la forme d'une pastille `R` suivie de l'identifiant de ligne Grist (`R12` pour la ligne 12). Cet identifiant reste stable quel que soit le tri ou le filtre de la vue.
+
+Accorder l'accès **document complet** dans Grist, requis pour déplacer les pastilles.
+
+| Option | Type attendu | Rôle |
+| --- | --- | --- |
+| Gravité | Entier (1 à 4) | Axe vertical, 4 en haut (obligatoire) |
+| Probabilité | Entier (1 à 4) | Axe horizontal, 4 à droite (obligatoire) |
+| Intitulé (infobulle) | Texte | Affiché au survol d'une pastille (facultatif) |
+
+Les risques les plus graves et les plus probables se trouvent donc en haut à droite. Chaque case est colorée selon le produit gravité × probabilité : vert jusqu'à 2, jaune de 3 à 6, orange pour 8 et 9, rouge à partir de 12.
+
+Cliquer une pastille la met en évidence et positionne le curseur Grist sur la ligne ; `allowSelectBy` permet aux autres vues de la page de se filtrer dessus. À l'inverse, déplacer le curseur dans une autre vue met en évidence la pastille correspondante.
+
+Glisser une pastille vers une autre case écrit la gravité et la probabilité de cette case en une seule action, qu'un seul « Annuler » dans Grist défait. Une pastille du bandeau « Non positionnés » peut être placée dans la matrice ; le bandeau n'accepte en revanche aucun dépôt. Le déplacement est désactivé lorsque le document est en lecture seule ou que le widget n'a pas l'accès complet. En cas d'échec (colonne formule, droits insuffisants), un message s'affiche et la pastille reprend sa place.
+
+Les lignes dont la gravité ou la probabilité est vide ou hors de 1 à 4 sont listées sous la matrice, dans le bandeau « Non positionnés », et restent cliquables. Les filtres et le tri de la vue s'appliquent : le tri détermine l'ordre des pastilles dans une case.

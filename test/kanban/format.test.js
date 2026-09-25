@@ -37,7 +37,3 @@ test('isImageAttachment / isPdfAttachment: routage de la visionneuse', function 
   assert.equal(L.isPdfAttachment({ name: 'doc.pdf' }), true);
   assert.equal(L.isPdfAttachment({ name: 'doc.txt' }), false);
 });
-
-test('escapeHtml: messages d aide injectes en innerHTML', function () {
-  assert.equal(L.escapeHtml('<b>&"\''), '&lt;b&gt;&amp;&quot;&#39;');
-});

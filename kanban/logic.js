@@ -40,7 +40,7 @@
   // --- Parsing / listes -----------------------------------------------------
 
   function parseWidgetOptions(raw) {
-    try { return JSON.parse(raw || '{}'); } catch (e) { return {}; }
+    try { return JSON.parse(raw || '{}'); } catch { return {}; }
   }
 
   function parseCustomViewDef(rawOptions) {
@@ -64,7 +64,7 @@
     try {
       var u = new URL(url, baseHref || 'https://example.invalid/');
       return u.origin + u.pathname;
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -308,15 +308,6 @@
 
   // --- Affichage ------------------------------------------------------------
 
-  function escapeHtml(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
   function formatScalar(type, raw) {
     if (raw == null || raw === '') return '';
     if (type === 'Bool') return raw ? 'Oui' : 'Non';
@@ -394,7 +385,6 @@
     resolveSectionRef: resolveSectionRef,
     summaryGroupColIds: summaryGroupColIds,
 
-    escapeHtml: escapeHtml,
     formatScalar: formatScalar,
     parseHyperlink: parseHyperlink,
     isImageAttachment: isImageAttachment,

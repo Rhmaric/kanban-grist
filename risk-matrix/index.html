@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+  <title>Matrice des risques Grist</title>
+  <script src="../vendor/grist-plugin-api.js"></script>
+  <script src="../vendor/Sortable.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="page-aide">
+    <article class="aide">
+      <h1>Matrice des risques</h1>
+      <p>
+        Cette vue place chaque ligne d’une table dans une matrice Gravité × Probabilité.
+        Chaque risque apparaît sous la forme d’une pastille <strong>R</strong> suivie de l’identifiant de sa ligne.
+      </p>
+
+      <h2>Pour commencer</h2>
+      <ul>
+        <li>Ouvrez le panneau de configuration.</li>
+        <li>Accordez l’accès <strong>document complet</strong>, nécessaire pour déplacer les pastilles.</li>
+        <li>Associez <strong>Gravité</strong> et <strong>Probabilité</strong> à deux colonnes de type "Entier", avec des valeurs de 1 à 4.</li>
+        <li>Associez éventuellement <strong>Intitulé</strong> à une colonne texte : il s’affiche au survol d’une pastille.</li>
+      </ul>
+
+      <h2>Fonctionnalités</h2>
+      <ul>
+        <li>Plus un risque est grave et probable, plus il se situe en haut à droite, dans les cases orange et rouges.</li>
+        <li>Glisser une pastille vers une autre case met à jour sa gravité et sa probabilité. Une pastille « Non positionnée » peut ainsi être placée dans la matrice.</li>
+        <li>Cliquer une pastille sélectionne la ligne : les autres vues de la page peuvent utiliser « Sélectionner par » sur cette matrice.</li>
+        <li>Les lignes dont la gravité ou la probabilité est vide ou hors de 1 à 4 sont listées sous la matrice, dans « Non positionnés ».</li>
+        <li>Les filtres et le tri de la vue s’appliquent à la matrice.</li>
+      </ul>
+
+      <div class="aide-reco">
+        <h2>Recommandation</h2>
+        <p>
+          Associez cette matrice à une <strong>vue Fiche</strong> sur la même page, avec
+          « Sélectionner par » = cette matrice, pour consulter et modifier le détail du risque sélectionné.
+        </p>
+      </div>
+    </article>
+  </div>
+  <div id="app" hidden>
+    <div id="matrice" role="grid" aria-label="Matrice des risques"></div>
+    <div id="pied">
+      <div id="legende"></div>
+      <div id="hors-matrice" hidden></div>
+    </div>
+  </div>
+  <script src="logic.js"></script>
+  <script src="widget.js"></script>
+</body>
+</html>
