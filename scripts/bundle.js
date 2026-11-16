@@ -36,10 +36,9 @@ function bundle(srcDir, outDir) {
 
   var js = sources.map(function (file) { return fs.readFileSync(file, 'utf8'); }).join('\n;\n');
 
-  var first = true;
+  var vus = 0;
   var bundledHtml = html.replace(SCRIPT_TAG, function (tag) {
-    if (!first) return '';
-    first = false;
+    if (++vus < sources.length) return '';
     var indent = /^[ \t]*/.exec(tag)[0];
     return indent + BUNDLE_TAG + '\n';
   });
